@@ -9,8 +9,7 @@
  *   e nesta planilha (spreadsheets.currentonly). O resto do Drive/Gmail fica fora de alcance.
  * - O token de acesso nunca sai daqui: o site manda pedaços do vídeo pra cá e este script
  *   repassa pro Drive. O endereço da sessão de upload também fica guardado aqui (cache).
- * - Só aceita quem tem a chave do link do QR code (?k=...), só vídeos, até MAX_MB cada,
- *   e no máximo MAX_PER_DAY vídeos por dia.
+ * - Só aceita vídeos, até MAX_MB cada, e no máximo MAX_PER_DAY vídeos por dia.
  */
 
 const FOLDER_NAME = "Sambagasse – Vídeos";
@@ -22,17 +21,12 @@ const FOLDER_MIME = "application/vnd.google-apps.folder";
 const props = PropertiesService.getScriptProperties();
 const cache = CacheService.getScriptCache();
 
-// Rodar UMA vez pelo editor (▶ Executar): cria a pasta, a chave e o cabeçalho da planilha.
+// Rodar UMA vez pelo editor (▶ Executar): cria a pasta e o cabeçalho da planilha.
 function setup() {
   let folderId = props.getProperty("FOLDER_ID");
   if (!folderId) {
     folderId = drive("post", "https://www.googleapis.com/drive/v3/files?fields=id", { name: FOLDER_NAME, mimeType: FOLDER_MIME }).id;
     props.setProperty("FOLDER_ID", folderId);
-  }
-  let key = props.getProperty("UPLOAD_KEY");
-  if (!key) {
-    key = Utilities.getUuid().replace(/-/g, "").slice(0, 12);
-    props.setProperty("UPLOAD_KEY", key);
   }
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
   if (sheet.getLastRow() === 0) {
@@ -40,7 +34,6 @@ function setup() {
     sheet.setFrozenRows(1);
   }
   Logger.log("Pasta dos vídeos: https://drive.google.com/drive/folders/" + folderId);
-  Logger.log("Chave (vai no link do QR code): k=" + key);
 }
 
 // Abrir a URL do App da Web no navegador mostra isto: serve pra testar se a implantação funcionou.
@@ -52,7 +45,6 @@ function doPost(e) {
   let out;
   try {
     const req = JSON.parse(e.postData.contents);
-    if (!req.k || req.k !== props.getProperty("UPLOAD_KEY")) throw fail("forbidden");
     if (req.action === "start") out = start(req);
     else if (req.action === "chunk") out = chunk(req);
     else if (req.action === "status") out = status(req);

@@ -189,15 +189,13 @@ footer { text-align: center; padding: 0 16px 32px; font-size: .8rem; color: var(
 
 <script>
 // URL do App da Web do Apps Script (../apps_script/Code.gs), que salva os vídeos no Google Drive.
-// Ela é pública por natureza: o script só aceita quem tem a chave ?k= do link do QR code.
+// Ela é pública por natureza: o script só aceita vídeos, com limite de tamanho e por dia.
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxLjuWkTJ1oqNXxT4D64m-qAnYaD6zwEXCtoerk3Z27X_1XNdrI7tAJMlO9lFsHs7w/exec";
 // Tem que bater com MAX_MB no Code.gs
 const MAX_MB = 2000;
 const MAX_LABEL = MAX_MB >= 1000 ? MAX_MB / 1000 + " GB" : MAX_MB + " MB";
-// Link do QR code: sambagassezh.github.io/videos/?festa=outubro-2026&k=<chave do setup()>
-const params = new URLSearchParams(location.search);
-const EVENT = params.get("festa") || null;
-const KEY = params.get("k") || "";
+// Identifica a festa: sambagassezh.github.io/videos/?festa=outubro-2026
+const EVENT = new URLSearchParams(location.search).get("festa") || null;
 
 const T = {
   pt: {
@@ -212,7 +210,6 @@ const T = {
     total: "{n} vídeo(s) · {size}", keep: "Não feche esta página até terminar 🙏",
     waiting: "Na fila", uploading: "Enviando… {p}%", done: "Enviado ✓", failed: "Falhou — toque em Tentar de novo",
     tooBig: "Grande demais (máx. {max})", notVideo: "Isso não é um vídeo",
-    badLink: "Este link não está completo — use o link do QR code 🙏",
     noFiles: "Escolha pelo menos um vídeo 🎥", needConsent: "Marque a autorização pra poder enviar 🙏", fail: "Alguns vídeos não foram. A internet caiu? Tenta de novo.",
     thanksTitle: "Valeu! 🥁", thanksText: "Recebemos teus vídeos. Fica de olho no nosso Instagram! ❤️", again: "Mandar mais vídeos",
   },
@@ -228,7 +225,6 @@ const T = {
     total: "{n} video(s) · {size}", keep: "Please keep this page open until it's done 🙏",
     waiting: "Waiting", uploading: "Uploading… {p}%", done: "Sent ✓", failed: "Failed — tap Try again",
     tooBig: "Too big (max {max})", notVideo: "That's not a video",
-    badLink: "This link isn't complete — please use the QR code link 🙏",
     noFiles: "Pick at least one video 🎥", needConsent: "Please tick the permission box to send 🙏", fail: "Some videos didn't make it. Connection lost? Try again.",
     thanksTitle: "Thank you! 🥁", thanksText: "We got your videos. Keep an eye on our Instagram! ❤️", again: "Send more videos",
   },
@@ -244,7 +240,6 @@ const T = {
     total: "{n} Video(s) · {size}", keep: "Bitte lass die Seite offen, bis alles fertig ist 🙏",
     waiting: "Wartet", uploading: "Wird hochgeladen… {p}%", done: "Gesendet ✓", failed: "Fehlgeschlagen — tippe auf Nochmal versuchen",
     tooBig: "Zu gross (max. {max})", notVideo: "Das ist kein Video",
-    badLink: "Dieser Link ist unvollständig — bitte nutze den Link vom QR-Code 🙏",
     noFiles: "Wähl mindestens ein Video aus 🎥", needConsent: "Bitte bestätige die Erlaubnis 🙏", fail: "Einige Videos sind nicht angekommen. Verbindung weg? Nochmal versuchen.",
     thanksTitle: "Danke! 🥁", thanksText: "Wir haben deine Videos. Schau auf unserem Instagram vorbei! ❤️", again: "Weitere Videos senden",
   },
@@ -260,7 +255,6 @@ const T = {
     total: "{n} vidéo(s) · {size}", keep: "Garde cette page ouverte jusqu'à la fin 🙏",
     waiting: "En attente", uploading: "Envoi… {p} %", done: "Envoyé ✓", failed: "Échec — touche Réessayer",
     tooBig: "Trop lourd (max. {max})", notVideo: "Ce n'est pas une vidéo",
-    badLink: "Ce lien est incomplet — utilise le lien du QR code 🙏",
     noFiles: "Choisis au moins une vidéo 🎥", needConsent: "Coche l'autorisation pour envoyer 🙏", fail: "Certaines vidéos ne sont pas passées. Connexion perdue ? Réessaie.",
     thanksTitle: "Merci ! 🥁", thanksText: "On a bien reçu tes vidéos. Garde un œil sur notre Instagram ! ❤️", again: "Envoyer d'autres vidéos",
   },
@@ -276,7 +270,6 @@ const T = {
     total: "{n} video · {size}", keep: "Tieni aperta questa pagina finché non finisce 🙏",
     waiting: "In attesa", uploading: "Invio… {p}%", done: "Inviato ✓", failed: "Non riuscito — tocca Riprova",
     tooBig: "Troppo grande (max {max})", notVideo: "Questo non è un video",
-    badLink: "Questo link non è completo — usa il link del QR code 🙏",
     noFiles: "Scegli almeno un video 🎥", needConsent: "Spunta l'autorizzazione per inviare 🙏", fail: "Alcuni video non sono arrivati. Connessione persa? Riprova.",
     thanksTitle: "Grazie! 🥁", thanksText: "Abbiamo ricevuto i tuoi video. Tieni d'occhio il nostro Instagram! ❤️", again: "Manda altri video",
   },
@@ -393,7 +386,7 @@ function updateSummary() {
 async function call(body) {
   let res;
   try {
-    res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ k: KEY, ...body }) });
+    res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(body) });
   } catch (x) {
     throw Object.assign(new Error("network"), { retry: true });
   }
@@ -466,7 +459,6 @@ async function submit(e) {
   }
 
   busy = true;
-  let badLink = false;
   updateSummary();
   await keepAwake();
   const credit = $("credit").value.trim();
@@ -477,18 +469,15 @@ async function submit(e) {
       item.state = "done";
     } catch (x) {
       console.error(x);
-      if (x.code === "forbidden") badLink = true;
       item.state = x.code === "too_big" || x.code === "not_video" ? "invalid" : "failed";
     }
     renderItem(item);
-    if (badLink) break;
   }
   busy = false;
   releaseAwake();
   updateSummary();
 
-  if (badLink) { err.textContent = t.badLink; err.hidden = false; }
-  else if (items.some(i => i.state === "failed")) { err.textContent = t.fail; err.hidden = false; }
+  if (items.some(i => i.state === "failed")) { err.textContent = t.fail; err.hidden = false; }
   else finish();
 }
 

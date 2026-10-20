@@ -29,8 +29,8 @@ Videos/
 4. **Autorizar e preparar:** escolha a função `setup` no menu de cima → **▶ Executar** →
    *Revisar permissões* → escolha a conta → "O Google não verificou este app" →
    *Avançado* → *Acessar … (não seguro)* → *Permitir*.
-   (É normal: o "app" é o seu próprio script.) No *Registro de execução* aparecem
-   o link da pasta e a **chave** (`k=...`). Anote a chave.
+   (É normal: o "app" é o seu próprio script.) No *Registro de execução* aparece
+   o link da pasta.
 5. **Publicar:** *Implantar → Nova implantação* → ⚙️ tipo **App da Web** →
    *Executar como:* **Eu** · *Quem pode acessar:* **Qualquer pessoa** → *Implantar*.
    Copie a **URL do App da Web** (termina em `/exec`). Abrindo ela no navegador deve
@@ -42,10 +42,10 @@ Videos/
 
 ## Cada festa
 
-    https://sambagassezh.github.io/videos/?festa=outubro-2026&k=SUA_CHAVE
+    https://sambagassezh.github.io/videos/?festa=outubro-2026
 
-Faça o QR code com esse link. Sem o `k` certo o site não envia nada
-(protege contra spam). Cada festa vira uma subpasta no Drive.
+Faça o QR code com esse link. Cada festa vira uma subpasta no Drive
+(sem `?festa=` vai pra `sem-festa`).
 
 ## Mudou o Code.gs?
 
