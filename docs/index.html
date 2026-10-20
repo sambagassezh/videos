@@ -191,8 +191,8 @@ footer { text-align: center; padding: 0 16px 32px; font-size: .8rem; color: var(
 // URL do App da Web do Apps Script (../apps_script/Code.gs), que salva os vídeos no Google Drive.
 // Ela é pública por natureza: o script só aceita vídeos, com limite de tamanho e por dia.
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxLjuWkTJ1oqNXxT4D64m-qAnYaD6zwEXCtoerk3Z27X_1XNdrI7tAJMlO9lFsHs7w/exec";
-// Tem que bater com MAX_MB no Code.gs
-const MAX_MB = 2000;
+// Tem que bater com MAX_MB no Code.gs (na prática "aceita tudo")
+const MAX_MB = 50000;
 const MAX_LABEL = MAX_MB >= 1000 ? MAX_MB / 1000 + " GB" : MAX_MB + " MB";
 // Identifica a festa: sambagassezh.github.io/videos/?festa=outubro-2026
 const EVENT = new URLSearchParams(location.search).get("festa") || null;
@@ -202,7 +202,7 @@ const T = {
     html: "pt-BR", title: "Manda teu vídeo!",
     lead: "Filmou a roda? Manda pra gente em qualidade original — os melhores vão pro nosso Instagram! 🎥🥁",
     pickQ: "Escolha os vídeos", pickHint: "Pode mandar vários", pickBtn: "Toque para escolher",
-    pickSub: "Vai na qualidade original, sem compressão · até {max} por vídeo",
+    pickSub: "Vai na qualidade original, sem compressão",
     creditQ: "Seu nome ou @ do Instagram", creditHint: "Opcional — pra gente te dar o crédito", creditPh: "@seu.insta",
     consentQ: "Autorização",
     consentText: "Autorizo o Sambagasse a usar e publicar esses vídeos nas redes sociais e no site.",
@@ -217,7 +217,7 @@ const T = {
     html: "en", title: "Send us your videos!",
     lead: "Filmed the roda? Send it to us in original quality — the best ones go on our Instagram! 🎥🥁",
     pickQ: "Choose your videos", pickHint: "You can send several", pickBtn: "Tap to choose",
-    pickSub: "Sent in original quality, no compression · up to {max} per video",
+    pickSub: "Sent in original quality, no compression",
     creditQ: "Your name or Instagram @", creditHint: "Optional — so we can credit you", creditPh: "@your.insta",
     consentQ: "Permission",
     consentText: "I allow Sambagasse to use and publish these videos on social media and the website.",
@@ -232,7 +232,7 @@ const T = {
     html: "de-CH", title: "Schick uns dein Video!",
     lead: "Die Roda gefilmt? Schick's uns in Originalqualität — die besten kommen auf unser Instagram! 🎥🥁",
     pickQ: "Videos auswählen", pickHint: "Mehrere möglich", pickBtn: "Tippen zum Auswählen",
-    pickSub: "In Originalqualität, ohne Komprimierung · bis {max} pro Video",
+    pickSub: "In Originalqualität, ohne Komprimierung",
     creditQ: "Dein Name oder Instagram-@", creditHint: "Freiwillig — damit wir dich nennen können", creditPh: "@dein.insta",
     consentQ: "Erlaubnis",
     consentText: "Ich erlaube Sambagasse, diese Videos auf Social Media und der Website zu verwenden und zu veröffentlichen.",
@@ -247,7 +247,7 @@ const T = {
     html: "fr", title: "Envoie-nous ta vidéo !",
     lead: "Tu as filmé la roda ? Envoie-la-nous en qualité originale — les meilleures iront sur notre Instagram ! 🎥🥁",
     pickQ: "Choisis tes vidéos", pickHint: "Plusieurs possibles", pickBtn: "Touche pour choisir",
-    pickSub: "En qualité originale, sans compression · jusqu'à {max} par vidéo",
+    pickSub: "En qualité originale, sans compression",
     creditQ: "Ton nom ou ton @ Instagram", creditHint: "Facultatif — pour te créditer", creditPh: "@ton.insta",
     consentQ: "Autorisation",
     consentText: "J'autorise Sambagasse à utiliser et publier ces vidéos sur les réseaux sociaux et le site.",
@@ -262,7 +262,7 @@ const T = {
     html: "it", title: "Mandaci il tuo video!",
     lead: "Hai filmato la roda? Mandacela in qualità originale — i migliori finiscono sul nostro Instagram! 🎥🥁",
     pickQ: "Scegli i video", pickHint: "Puoi mandarne più di uno", pickBtn: "Tocca per scegliere",
-    pickSub: "In qualità originale, senza compressione · fino a {max} per video",
+    pickSub: "In qualità originale, senza compressione",
     creditQ: "Il tuo nome o @ Instagram", creditHint: "Facoltativo — per darti il credito", creditPh: "@il.tuo.insta",
     consentQ: "Autorizzazione",
     consentText: "Autorizzo Sambagasse a usare e pubblicare questi video sui social e sul sito.",
@@ -284,6 +284,8 @@ let lang = pickLang();
 let items = [];    // { file, type, li, state: "waiting" | "uploading" | "done" | "failed" | "invalid" }
 let busy = false;
 let wakeLock = null;
+// Identifica "uma pessoa" (esta visita ao site): o script soma o total e avisa por email se passar de 5 GB
+const BATCH = Math.random().toString(36).slice(2, 12);
 
 function pickLang() {
   try { const saved = localStorage.getItem("sg_lang"); if (T[saved]) return saved; } catch (_) {}
@@ -414,7 +416,7 @@ async function uploadOne(item, credit) {
   while (true) {
     try {
       if (!item.id) {
-        const r = await call({ action: "start", event: EVENT, lang, name: item.file.name, size: item.file.size, type: item.type, credit });
+        const r = await call({ action: "start", event: EVENT, lang, name: item.file.name, size: item.file.size, type: item.type, credit, batch: BATCH });
         Object.assign(item, { id: r.id, chunk: r.chunk, offset: 0 });
       } else if (fails || item.state === "uploading") {
         item.offset = (await call({ action: "status", id: item.id })).offset;

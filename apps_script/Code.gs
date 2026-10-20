@@ -10,10 +10,13 @@
  * - O token de acesso nunca sai daqui: o site manda pedaços do vídeo pra cá e este script
  *   repassa pro Drive. O endereço da sessão de upload também fica guardado aqui (cache).
  * - Só aceita vídeos, até MAX_MB cada, e no máximo MAX_PER_DAY vídeos por dia.
+ * - Se uma mesma pessoa (uma visita ao site) passar de ALERT_GB no total, manda um email de aviso
+ *   (pra ALERT_EMAIL nas Propriedades do script; o setup() preenche com o email desta conta).
  */
 
 const FOLDER_NAME = "Sambagasse – Vídeos";
-const MAX_MB = 2000;
+const MAX_MB = 50000; // na prática "aceita tudo"; só barra arquivo absurdo
+const ALERT_GB = 5;
 const MAX_PER_DAY = 300;
 const CHUNK = 8 * 1024 * 1024; // múltiplo de 256 KB (exigência do Drive)
 const FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -33,7 +36,10 @@ function setup() {
     sheet.appendRow(["Data", "Festa", "Nome / @", "Autorizou postar", "Arquivo", "Nome original", "MB", "Idioma", "Link"]);
     sheet.setFrozenRows(1);
   }
+  if (!props.getProperty("ALERT_EMAIL")) props.setProperty("ALERT_EMAIL", Session.getEffectiveUser().getEmail());
   Logger.log("Pasta dos vídeos: https://drive.google.com/drive/folders/" + folderId);
+  Logger.log("Avisos de upload grande vão pra: " + props.getProperty("ALERT_EMAIL") +
+    " (pra trocar: ⚙️ Configurações do projeto → Propriedades do script → ALERT_EMAIL)");
 }
 
 // Abrir a URL do App da Web no navegador mostra isto: serve pra testar se a implantação funcionou.
@@ -66,6 +72,7 @@ function start(req) {
 
   const event = clean(req.event, 60) || "sem-festa";
   const credit = String(req.credit || "").trim().slice(0, 120);
+  trackBatch(clean(req.batch, 20), size, event, credit);
   const original = String(req.name || "").slice(0, 200);
   const ext = (original.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "mp4";
   const stamp = Utilities.formatDate(new Date(), "Europe/Zurich", "yyyy-MM-dd_HH-mm-ss");
@@ -165,6 +172,37 @@ function eventFolder(event) {
     return id;
   } finally {
     lock.releaseLock();
+  }
+}
+
+// Soma o que uma mesma visita ao site já mandou; ao passar de ALERT_GB, avisa por email (uma vez só).
+// Conta pelo tamanho declarado no início de cada vídeo, então o aviso chega logo, não no fim.
+function trackBatch(batch, size, event, credit) {
+  if (!batch) return;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  let b;
+  try {
+    b = JSON.parse(cache.get("B_" + batch) || '{"bytes":0,"n":0,"alerted":false}');
+    b.bytes += size;
+    b.n += 1;
+    const cross = !b.alerted && b.bytes > ALERT_GB * 1e9;
+    if (cross) b.alerted = true;
+    cache.put("B_" + batch, JSON.stringify(b), 21600);
+    if (!cross) return;
+  } finally {
+    lock.releaseLock();
+  }
+  const to = props.getProperty("ALERT_EMAIL");
+  if (!to) return;
+  try {
+    MailApp.sendEmail(to, `Sambagasse vídeos: alguém já mandou ${(b.bytes / 1e9).toFixed(1)} GB`,
+      `Uma mesma pessoa passou de ${ALERT_GB} GB de vídeos (o upload continua normalmente).\n\n` +
+      `Festa: ${event}\nNome / @: ${credit || "(sem nome)"}\nVídeos até agora: ${b.n}\nTotal até agora: ${(b.bytes / 1e9).toFixed(1)} GB\n\n` +
+      `Pasta: https://drive.google.com/drive/folders/${props.getProperty("FOLDER_ID")}\n` +
+      `Planilha: ${SpreadsheetApp.getActiveSpreadsheet().getUrl()}`);
+  } catch (x) {
+    console.error("email", x);
   }
 }
 

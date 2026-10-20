@@ -52,10 +52,14 @@ Faça o QR code com esse link. Cada festa vira uma subpasta no Drive
 *Implantar → Gerenciar implantações* → ✏️ → *Versão:* **Nova versão** → *Implantar*.
 Assim a URL continua a mesma. (Uma "Nova implantação" cria URL nova.)
 
-## Limites (em `Code.gs`)
+## Limites e aviso (em `Code.gs`)
 
-- `MAX_MB = 2000` por vídeo (mesmo valor em `docs/index.html`).
-- `MAX_PER_DAY = 300` vídeos por dia.
+- Aceita praticamente tudo: `MAX_MB = 50000` (50 GB) por vídeo, só pra barrar arquivo absurdo
+  (mesmo valor em `docs/index.html`). `MAX_PER_DAY = 300` vídeos por dia.
+- **Aviso por email:** se uma mesma visita ao site passar de `ALERT_GB = 5` GB no total, chega um
+  email (uma vez) com festa, nome, quantidade e tamanho. O envio continua normalmente.
+  O destinatário fica em ⚙️ *Configurações do projeto → Propriedades do script → `ALERT_EMAIL`*
+  (o `setup` preenche com o email da conta; troque ali se quiser outro).
 - Espaço: o da conta Google (15 GB grátis, dividido com o Gmail dela).
 
 ## Segurança
