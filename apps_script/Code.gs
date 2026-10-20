@@ -7,8 +7,9 @@
  * Segurança:
  * - Permissões mínimas (appsscript.json): só mexe nos arquivos que ELE criou (drive.file)
  *   e nesta planilha (spreadsheets.currentonly). O resto do Drive/Gmail fica fora de alcance.
- * - O token de acesso nunca sai daqui: o site manda pedaços do vídeo pra cá e este script
- *   repassa pro Drive. O endereço da sessão de upload também fica guardado aqui (cache).
+ * - O token de acesso nunca sai daqui. O site recebe só o endereço da sessão de upload de UM
+ *   arquivo e manda o vídeo direto pro Drive (rápido). Se o navegador não conseguir, ele manda
+ *   os pedaços pra cá e este script repassa pro Drive (lento, mas funciona).
  * - Só aceita vídeos, até MAX_MB cada, e no máximo MAX_PER_DAY vídeos por dia.
  * - Se uma mesma pessoa (uma visita ao site) passar de ALERT_GB no total, manda um email de aviso
  *   (pra ALERT_EMAIL nas Propriedades do script; o setup() preenche com o email desta conta).
@@ -20,6 +21,8 @@ const ALERT_GB = 5;
 const MAX_PER_DAY = 300;
 const CHUNK = 8 * 1024 * 1024; // múltiplo de 256 KB (exigência do Drive)
 const FOLDER_MIME = "application/vnd.google-apps.folder";
+// Sites que podem mandar o vídeo direto pro Drive (o Drive libera CORS só pra origem informada aqui)
+const ORIGINS = ["https://sambagassezh.github.io", "http://localhost:8000"];
 
 const props = PropertiesService.getScriptProperties();
 const cache = CacheService.getScriptCache();
@@ -70,6 +73,7 @@ function start(req) {
   if (!(size > 0) || size > MAX_MB * 1024 * 1024) throw fail("too_big");
   countToday();
 
+  const origin = ORIGINS.includes(req.origin) ? req.origin : null;
   const event = clean(req.event, 60) || "sem-festa";
   const credit = String(req.credit || "").trim().slice(0, 120);
   trackBatch(clean(req.batch, 20), size, event, credit);
@@ -82,7 +86,9 @@ function start(req) {
   const res = UrlFetchApp.fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name", {
     method: "post",
     contentType: "application/json; charset=UTF-8",
-    headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken(), "X-Upload-Content-Type": type, "X-Upload-Content-Length": String(size) },
+    headers: Object.assign(
+      { Authorization: "Bearer " + ScriptApp.getOAuthToken(), "X-Upload-Content-Type": type, "X-Upload-Content-Length": String(size) },
+      origin ? { Origin: origin } : {}),
     payload: JSON.stringify({ name, description, parents: [eventFolder(event)] }),
     muteHttpExceptions: true,
   });
@@ -90,8 +96,10 @@ function start(req) {
 
   const id = Utilities.getUuid();
   const lang = clean(req.lang, 2);
-  cache.put("u_" + id, JSON.stringify({ uri: header(res, "location"), size, type, name, original, event, credit, lang }), 21600);
-  return { id, chunk: CHUNK };
+  const uri = header(res, "location");
+  cache.put("u_" + id, JSON.stringify({ uri, size, type, name, original, event, credit, lang }), 21600);
+  // uri = endereço de upload só deste arquivo (não dá acesso a mais nada); o site usa pra mandar direto
+  return { id, chunk: CHUNK, uri: origin ? uri : null };
 }
 
 // Recebe um pedaço (base64) e repassa pro Drive. Devolve até onde o Drive já tem, ou done.

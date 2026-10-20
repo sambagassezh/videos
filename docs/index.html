@@ -409,21 +409,63 @@ function toBase64(blob) {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// Upload "resumable" em pedaços de 8 MB: aguenta vídeo grande e internet ruim de festa —
-// se cair, pergunta ao Drive até onde chegou e continua dali em vez de recomeçar do zero.
+// Pedaços do envio direto pro Drive (múltiplo de 256 KB, exigência do Drive)
+const DIRECT_CHUNK = 16 * 1024 * 1024;
+
+// Manda um pedaço direto pro endereço de upload do Drive (sem passar pelo Apps Script).
+function putDirect(item) {
+  const start = item.offset;
+  const end = Math.min(start + DIRECT_CHUNK, item.file.size);
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open("PUT", item.uri);
+    x.setRequestHeader("Content-Range", `bytes ${start}-${end - 1}/${item.file.size}`);
+    x.upload.onprogress = e => {
+      const p = Math.floor((start + e.loaded) / item.file.size * 100);
+      if (p !== item.pct) { item.pct = p; renderItem(item); }
+    };
+    x.onload = () => {
+      if (x.status === 200 || x.status === 201) return resolve({ done: true });
+      if (x.status === 308) {
+        const range = x.getResponseHeader("Range"); // "bytes=0-16777215"
+        return resolve({ offset: range ? Number(range.split("-")[1]) + 1 : null });
+      }
+      if (x.status === 404 || x.status === 410) return reject(Object.assign(new Error("expired"), { code: "expired" }));
+      reject(Object.assign(new Error("drive " + x.status), { retry: true }));
+    };
+    x.onerror = () => reject(Object.assign(new Error("direct"), { retry: true, direct: true }));
+    x.send(item.file.slice(start, end));
+  });
+}
+
+// Upload "resumable": aguenta vídeo grande e internet ruim de festa — se cair, pergunta ao
+// Drive até onde chegou e continua dali em vez de recomeçar do zero.
+// Normal: o vídeo vai direto pro Drive (item.uri). Se o navegador não deixar, cai pro modo
+// lento: pedaços em base64 pro Apps Script, que repassa pro Drive.
 async function uploadOne(item, credit) {
   let fails = 0;
   while (true) {
     try {
       if (!item.id) {
-        const r = await call({ action: "start", event: EVENT, lang, name: item.file.name, size: item.file.size, type: item.type, credit, batch: BATCH });
-        Object.assign(item, { id: r.id, chunk: r.chunk, offset: 0 });
+        const r = await call({ action: "start", event: EVENT, lang, name: item.file.name, size: item.file.size, type: item.type, credit, batch: BATCH, origin: location.origin });
+        Object.assign(item, { id: r.id, chunk: r.chunk, uri: r.uri || null, offset: 0, directOk: false });
       } else if (fails || item.state === "uploading") {
         item.offset = (await call({ action: "status", id: item.id })).offset;
       }
       while (true) {
-        const data = await toBase64(item.file.slice(item.offset, item.offset + item.chunk));
-        const r = await call({ action: "chunk", id: item.id, offset: item.offset, data });
+        let r;
+        if (item.uri) {
+          r = await putDirect(item);
+          item.directOk = true;
+          // Terminou (o script confere e anota na planilha) ou o CORS escondeu o Range: pergunta ao script
+          if (r.done || r.offset === null) {
+            try { r = await call({ action: "status", id: item.id }); }
+            catch (x) { if (!(r.done && x.code === "expired")) throw x; } // já anotado numa tentativa anterior
+          }
+        } else {
+          const data = await toBase64(item.file.slice(item.offset, item.offset + item.chunk));
+          r = await call({ action: "chunk", id: item.id, offset: item.offset, data });
+        }
         if (r.done) return;
         item.offset = r.offset;
         item.pct = Math.floor(item.offset / item.file.size * 100);
@@ -432,6 +474,7 @@ async function uploadOne(item, credit) {
       }
     } catch (x) {
       if (x.code === "expired") item.id = null; // sessão de upload venceu (6 h): começa de novo
+      if (x.direct && !item.directOk) { item.uri = null; fails++; continue; } // navegador barrou o direto: modo lento
       if (!x.retry || ++fails > 6) throw x;
       await sleep(Math.min(2000 * fails, 15000));
     }
