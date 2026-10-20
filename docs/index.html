@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sambagasse – Vídeos</title>
+<meta name="description" content="Sambagasse – Manda teu vídeo da roda! · Send us your videos!">
+<link rel="icon" href="images/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap">
+<style>
+/* Mesmo visual da Pesquisa / Sorteio / sambagasse.ch: noite vinho, títulos Bangers amarelo-sol, botões pílula amarelos.
+   Fluxo: escolher vídeos → nome (opcional) + autorização → enviar (com progresso) → obrigado. */
+:root {
+  --bg: #221010;
+  --card: #2e1515;
+  --glass: rgba(255, 255, 255, .04);
+  --glass-line: rgba(255, 255, 255, .09);
+  --white: #ffffff;
+  --text: rgba(255, 255, 255, .88);
+  --muted: rgba(255, 255, 255, .58);
+  --red: #c20a0a;
+  --red-soft: #ff6b5e;
+  --sun: #facc15;
+  --green: #4ade80;
+  --font-heading: "Bangers", "Impact", "Arial Black", sans-serif;
+  --font-body: "Be Vietnam Pro", "Helvetica Neue", Arial, sans-serif;
+  --radius-sm: .5rem; --radius-md: 1rem; --radius-lg: 1.5rem; --radius-full: 9999px;
+  --ease: .22s cubic-bezier(.4, 0, .2, 1);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.55 var(--font-body);
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+.gutter { padding-inline: 16px; }
+.wrap { max-width: 640px; margin: 0 auto; }
+h1, h2, .heading { font-family: var(--font-heading); font-weight: 400; letter-spacing: .05em; text-transform: uppercase; text-wrap: balance; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+/* Hero */
+.hero { position: relative; overflow: hidden; text-align: center; padding-block: 40px 28px; background: var(--bg); }
+.hero .photo { position: absolute; inset: 0; background: url("images/roda.jpg") center 35% / cover no-repeat; transform: scale(1.04); }
+.hero .overlay { position: absolute; inset: 0; background: linear-gradient(rgba(34,16,16,.55) 0%, rgba(34,16,16,.8) 60%, var(--bg) 100%); }
+.hero .overlay::before { content: ""; position: absolute; inset: -50%; background: radial-gradient(circle, rgba(250,204,21,.08) 0%, transparent 60%); }
+.hero .content { position: relative; display: grid; justify-items: center; gap: 6px; }
+.hero img { width: 88px; height: 88px; filter: drop-shadow(0 0 10px rgba(0,0,0,.4)) drop-shadow(0 0 28px rgba(250,204,21,.5)); }
+.hero h1 { margin: 6px 0 0; color: var(--sun); font-size: clamp(2.6rem, 10vw, 4.6rem); line-height: .95; text-shadow: 0 4px 20px rgba(0,0,0,.5), 0 0 30px rgba(250,204,21,.3); }
+.hero .kicker { color: rgba(255,255,255,.85); letter-spacing: .2em; text-transform: uppercase; font-weight: 600; font-size: clamp(.75rem, 2.4vw, .95rem); }
+.hero .lead { margin: 8px 0 0; color: var(--text); max-width: 42ch; }
+
+main { padding-block: 8px 48px; }
+
+/* Idioma: chips pequenos (o idioma do celular já vem escolhido) */
+.langs { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.langs button { border: 1px solid var(--glass-line); background: var(--glass); border-radius: var(--radius-full); padding: 4px 12px; cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--muted); transition: border-color var(--ease), color var(--ease); }
+.langs button[aria-pressed="true"] { border-color: var(--sun); color: var(--sun); }
+
+form { display: grid; gap: 18px; }
+.q { background: var(--glass); border: 1px solid var(--glass-line); border-radius: var(--radius-md); padding: 18px; margin: 0; display: grid; gap: 10px; min-width: 0; transition: border-color var(--ease); }
+.q.missing { border-color: var(--red-soft); }
+.q legend { float: left; width: 100%; padding: 0; margin: 0 0 4px; font-weight: 800; color: var(--white); font-size: 1.05rem; line-height: 1.35; }
+.q legend .n { font-family: var(--font-heading); font-weight: 400; color: var(--sun); font-size: 1.5rem; letter-spacing: .04em; margin-right: 8px; vertical-align: -2px; }
+.q .hint { clear: both; margin: -4px 0 2px; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.tiny { font-size: .78rem; color: var(--muted); margin: 0; clear: both; }
+
+/* Escolher vídeos */
+.pick { clear: both; display: grid; justify-items: center; gap: 6px; padding: 26px 16px; border: 2px dashed rgba(250,204,21,.45); border-radius: var(--radius-md); background: rgba(250,204,21,.04); cursor: pointer; text-align: center; transition: border-color var(--ease), background var(--ease); }
+.pick:hover, .pick:focus-within { border-color: var(--sun); background: rgba(250,204,21,.08); }
+.pick .icon { font-size: 2.2rem; line-height: 1; }
+.pick strong { color: var(--sun); font-size: 1.1rem; }
+.pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+.files { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; clear: both; }
+.file { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 12px; padding: 8px; border: 1px solid var(--glass-line); border-radius: var(--radius-sm); background: rgba(0,0,0,.2); }
+.file video { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; background: #000; }
+.file .info { min-width: 0; display: grid; gap: 4px; }
+.file .name { font-weight: 600; color: var(--white); font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file .status { font-size: .78rem; color: var(--muted); }
+.file.done .status { color: var(--green); font-weight: 700; }
+.file.bad .status { color: var(--red-soft); font-weight: 700; }
+.bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--sun); transition: width .3s linear; }
+.file.done .bar i { background: var(--green); }
+.file .rm { background: none; border: 0; color: var(--muted); font-size: 1.3rem; cursor: pointer; padding: 4px 8px; line-height: 1; }
+.file .rm:hover { color: var(--red-soft); }
+
+.text-in { width: 100%; background: rgba(0,0,0,.25); border: 1px solid var(--glass-line); border-radius: var(--radius-sm); padding: 11px 14px; color: var(--white); clear: both; }
+.text-in:focus { border-color: var(--sun); outline: none; }
+.text-in::placeholder { color: var(--muted); }
+
+.opt { clear: both; display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; border: 1px solid var(--glass-line); border-radius: var(--radius-sm); background: rgba(0,0,0,.2); cursor: pointer; transition: border-color var(--ease), background var(--ease); }
+.opt:hover { border-color: rgba(250,204,21,.5); }
+.opt input { accent-color: var(--sun); width: 20px; height: 20px; margin: 2px 0 0; flex: none; }
+.opt:has(input:checked) { border-color: var(--sun); background: rgba(250,204,21,.1); color: var(--white); }
+
+.total { margin: 0; text-align: center; font-weight: 700; color: var(--white); }
+.keep { margin: 0; text-align: center; color: var(--sun); font-weight: 700; font-size: .9rem; }
+.btn-sun { background: var(--sun); color: var(--red); border: 0; border-radius: var(--radius-full); padding: 16px 32px; font-size: 1.15rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; cursor: pointer; width: 100%; transition: transform var(--ease), box-shadow var(--ease); }
+.btn-sun:hover:not(:disabled) { transform: translateY(-3px) scale(1.02); box-shadow: 0 8px 30px rgba(250,204,21,.4); }
+.btn-sun:disabled { opacity: .55; cursor: wait; }
+.btn-sun:focus-visible { outline-color: var(--white); outline-offset: 3px; }
+.err { margin: 0; text-align: center; color: var(--red-soft); font-weight: 700; }
+.linkbtn { background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; padding: 0; font-size: .85rem; justify-self: center; }
+.linkbtn:hover { color: var(--sun); }
+
+/* Obrigado */
+.thanks { text-align: center; display: grid; gap: 14px; justify-items: center; padding-block: 24px; }
+.thanks h2 { margin: 0; color: var(--sun); font-size: clamp(2.6rem, 10vw, 4rem); line-height: 1; text-shadow: 0 0 30px rgba(250,204,21,.35); }
+.thanks p { margin: 0; max-width: 40ch; }
+.thanks a { color: var(--sun); font-weight: 700; }
+
+footer { text-align: center; padding: 0 16px 32px; font-size: .8rem; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="photo" aria-hidden="true"></div>
+  <div class="overlay" aria-hidden="true"></div>
+  <div class="content gutter">
+    <img src="images/logo.png" alt="Sambagasse" onerror="this.hidden=true">
+    <div class="kicker">Roda de Samba · Zürich</div>
+    <h1 id="title">Sambagasse</h1>
+    <p class="lead" id="lead"></p>
+  </div>
+</header>
+
+<main class="gutter">
+  <div class="wrap">
+
+    <nav class="langs" id="langs" aria-label="Idioma / Language">
+      <button type="button" data-lang="pt">PT</button>
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="de">DE</button>
+      <button type="button" data-lang="fr">FR</button>
+      <button type="button" data-lang="it">IT</button>
+    </nav>
+
+    <form id="upload" novalidate>
+      <fieldset class="q" id="pickBox">
+        <legend><span class="n">1</span><span id="pickQ"></span></legend>
+        <p class="hint" id="pickHint"></p>
+        <label class="pick">
+          <span class="icon" aria-hidden="true">🎥</span>
+          <strong id="pickBtn"></strong>
+          <span class="tiny" id="pickSub"></span>
+          <input type="file" id="fileIn" accept="video/*" multiple>
+        </label>
+        <ul class="files" id="files"></ul>
+      </fieldset>
+
+      <fieldset class="q">
+        <legend><span class="n">2</span><span id="creditQ"></span></legend>
+        <p class="hint" id="creditHint"></p>
+        <input class="text-in" type="text" id="credit" maxlength="120" autocomplete="name">
+      </fieldset>
+
+      <fieldset class="q" id="consentBox">
+        <legend><span class="n">3</span><span id="consentQ"></span></legend>
+        <label class="opt"><input type="checkbox" id="consent"><span id="consentText"></span></label>
+      </fieldset>
+
+      <p class="total" id="total" hidden></p>
+      <p class="keep" id="keep" hidden></p>
+      <p class="err" id="err" role="alert" hidden></p>
+      <button type="submit" class="btn-sun" id="submit"></button>
+    </form>
+
+    <section class="thanks" id="thanks" hidden aria-live="polite">
+      <h2 id="thanksTitle"></h2>
+      <p id="thanksText"></p>
+      <p><a href="https://www.instagram.com/sambagasse/" target="_blank" rel="noopener">@sambagasse</a></p>
+      <button type="button" class="linkbtn" id="again"></button>
+    </section>
+
+  </div>
+</main>
+
+<footer>Sambagasse · Roda de Samba · Zürich</footer>
+
+<script>
+// URL do App da Web do Apps Script (../apps_script/Code.gs), que salva os vídeos no Google Drive.
+// Ela é pública por natureza: o script só aceita quem tem a chave ?k= do link do QR code.
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxLjuWkTJ1oqNXxT4D64m-qAnYaD6zwEXCtoerk3Z27X_1XNdrI7tAJMlO9lFsHs7w/exec";
+// Tem que bater com MAX_MB no Code.gs
+const MAX_MB = 2000;
+const MAX_LABEL = MAX_MB >= 1000 ? MAX_MB / 1000 + " GB" : MAX_MB + " MB";
+// Link do QR code: sambagassezh.github.io/videos/?festa=outubro-2026&k=<chave do setup()>
+const params = new URLSearchParams(location.search);
+const EVENT = params.get("festa") || null;
+const KEY = params.get("k") || "";
+
+const T = {
+  pt: {
+    html: "pt-BR", title: "Manda teu vídeo!",
+    lead: "Filmou a roda? Manda pra gente em qualidade original — os melhores vão pro nosso Instagram! 🎥🥁",
+    pickQ: "Escolha os vídeos", pickHint: "Pode mandar vários", pickBtn: "Toque para escolher",
+    pickSub: "Vai na qualidade original, sem compressão · até {max} por vídeo",
+    creditQ: "Seu nome ou @ do Instagram", creditHint: "Opcional — pra gente te dar o crédito", creditPh: "@seu.insta",
+    consentQ: "Autorização",
+    consentText: "Autorizo o Sambagasse a usar e publicar esses vídeos nas redes sociais e no site.",
+    submit: "Enviar", sending: "Enviando…", retry: "Tentar de novo",
+    total: "{n} vídeo(s) · {size}", keep: "Não feche esta página até terminar 🙏",
+    waiting: "Na fila", uploading: "Enviando… {p}%", done: "Enviado ✓", failed: "Falhou — toque em Tentar de novo",
+    tooBig: "Grande demais (máx. {max})", notVideo: "Isso não é um vídeo",
+    badLink: "Este link não está completo — use o link do QR code 🙏",
+    noFiles: "Escolha pelo menos um vídeo 🎥", needConsent: "Marque a autorização pra poder enviar 🙏", fail: "Alguns vídeos não foram. A internet caiu? Tenta de novo.",
+    thanksTitle: "Valeu! 🥁", thanksText: "Recebemos teus vídeos. Fica de olho no nosso Instagram! ❤️", again: "Mandar mais vídeos",
+  },
+  en: {
+    html: "en", title: "Send us your videos!",
+    lead: "Filmed the roda? Send it to us in original quality — the best ones go on our Instagram! 🎥🥁",
+    pickQ: "Choose your videos", pickHint: "You can send several", pickBtn: "Tap to choose",
+    pickSub: "Sent in original quality, no compression · up to {max} per video",
+    creditQ: "Your name or Instagram @", creditHint: "Optional — so we can credit you", creditPh: "@your.insta",
+    consentQ: "Permission",
+    consentText: "I allow Sambagasse to use and publish these videos on social media and the website.",
+    submit: "Send", sending: "Sending…", retry: "Try again",
+    total: "{n} video(s) · {size}", keep: "Please keep this page open until it's done 🙏",
+    waiting: "Waiting", uploading: "Uploading… {p}%", done: "Sent ✓", failed: "Failed — tap Try again",
+    tooBig: "Too big (max {max})", notVideo: "That's not a video",
+    badLink: "This link isn't complete — please use the QR code link 🙏",
+    noFiles: "Pick at least one video 🎥", needConsent: "Please tick the permission box to send 🙏", fail: "Some videos didn't make it. Connection lost? Try again.",
+    thanksTitle: "Thank you! 🥁", thanksText: "We got your videos. Keep an eye on our Instagram! ❤️", again: "Send more videos",
+  },
+  de: {
+    html: "de-CH", title: "Schick uns dein Video!",
+    lead: "Die Roda gefilmt? Schick's uns in Originalqualität — die besten kommen auf unser Instagram! 🎥🥁",
+    pickQ: "Videos auswählen", pickHint: "Mehrere möglich", pickBtn: "Tippen zum Auswählen",
+    pickSub: "In Originalqualität, ohne Komprimierung · bis {max} pro Video",
+    creditQ: "Dein Name oder Instagram-@", creditHint: "Freiwillig — damit wir dich nennen können", creditPh: "@dein.insta",
+    consentQ: "Erlaubnis",
+    consentText: "Ich erlaube Sambagasse, diese Videos auf Social Media und der Website zu verwenden und zu veröffentlichen.",
+    submit: "Senden", sending: "Wird gesendet…", retry: "Nochmal versuchen",
+    total: "{n} Video(s) · {size}", keep: "Bitte lass die Seite offen, bis alles fertig ist 🙏",
+    waiting: "Wartet", uploading: "Wird hochgeladen… {p}%", done: "Gesendet ✓", failed: "Fehlgeschlagen — tippe auf Nochmal versuchen",
+    tooBig: "Zu gross (max. {max})", notVideo: "Das ist kein Video",
+    badLink: "Dieser Link ist unvollständig — bitte nutze den Link vom QR-Code 🙏",
+    noFiles: "Wähl mindestens ein Video aus 🎥", needConsent: "Bitte bestätige die Erlaubnis 🙏", fail: "Einige Videos sind nicht angekommen. Verbindung weg? Nochmal versuchen.",
+    thanksTitle: "Danke! 🥁", thanksText: "Wir haben deine Videos. Schau auf unserem Instagram vorbei! ❤️", again: "Weitere Videos senden",
+  },
+  fr: {
+    html: "fr", title: "Envoie-nous ta vidéo !",
+    lead: "Tu as filmé la roda ? Envoie-la-nous en qualité originale — les meilleures iront sur notre Instagram ! 🎥🥁",
+    pickQ: "Choisis tes vidéos", pickHint: "Plusieurs possibles", pickBtn: "Touche pour choisir",
+    pickSub: "En qualité originale, sans compression · jusqu'à {max} par vidéo",
+    creditQ: "Ton nom ou ton @ Instagram", creditHint: "Facultatif — pour te créditer", creditPh: "@ton.insta",
+    consentQ: "Autorisation",
+    consentText: "J'autorise Sambagasse à utiliser et publier ces vidéos sur les réseaux sociaux et le site.",
+    submit: "Envoyer", sending: "Envoi…", retry: "Réessayer",
+    total: "{n} vidéo(s) · {size}", keep: "Garde cette page ouverte jusqu'à la fin 🙏",
+    waiting: "En attente", uploading: "Envoi… {p} %", done: "Envoyé ✓", failed: "Échec — touche Réessayer",
+    tooBig: "Trop lourd (max. {max})", notVideo: "Ce n'est pas une vidéo",
+    badLink: "Ce lien est incomplet — utilise le lien du QR code 🙏",
+    noFiles: "Choisis au moins une vidéo 🎥", needConsent: "Coche l'autorisation pour envoyer 🙏", fail: "Certaines vidéos ne sont pas passées. Connexion perdue ? Réessaie.",
+    thanksTitle: "Merci ! 🥁", thanksText: "On a bien reçu tes vidéos. Garde un œil sur notre Instagram ! ❤️", again: "Envoyer d'autres vidéos",
+  },
+  it: {
+    html: "it", title: "Mandaci il tuo video!",
+    lead: "Hai filmato la roda? Mandacela in qualità originale — i migliori finiscono sul nostro Instagram! 🎥🥁",
+    pickQ: "Scegli i video", pickHint: "Puoi mandarne più di uno", pickBtn: "Tocca per scegliere",
+    pickSub: "In qualità originale, senza compressione · fino a {max} per video",
+    creditQ: "Il tuo nome o @ Instagram", creditHint: "Facoltativo — per darti il credito", creditPh: "@il.tuo.insta",
+    consentQ: "Autorizzazione",
+    consentText: "Autorizzo Sambagasse a usare e pubblicare questi video sui social e sul sito.",
+    submit: "Invia", sending: "Invio…", retry: "Riprova",
+    total: "{n} video · {size}", keep: "Tieni aperta questa pagina finché non finisce 🙏",
+    waiting: "In attesa", uploading: "Invio… {p}%", done: "Inviato ✓", failed: "Non riuscito — tocca Riprova",
+    tooBig: "Troppo grande (max {max})", notVideo: "Questo non è un video",
+    badLink: "Questo link non è completo — usa il link del QR code 🙏",
+    noFiles: "Scegli almeno un video 🎥", needConsent: "Spunta l'autorizzazione per inviare 🙏", fail: "Alcuni video non sono arrivati. Connessione persa? Riprova.",
+    thanksTitle: "Grazie! 🥁", thanksText: "Abbiamo ricevuto i tuoi video. Tieni d'occhio il nostro Instagram! ❤️", again: "Manda altri video",
+  },
+};
+
+// Alguns celulares mandam o arquivo sem tipo; o bucket só aceita video/*
+const EXT_TYPE = { mp4: "video/mp4", m4v: "video/mp4", mov: "video/quicktime", webm: "video/webm", "3gp": "video/3gpp", mkv: "video/x-matroska", avi: "video/x-msvideo" };
+
+const $ = id => document.getElementById(id);
+const fill = (s, vars) => s.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+let lang = pickLang();
+let items = [];    // { file, type, li, state: "waiting" | "uploading" | "done" | "failed" | "invalid" }
+let busy = false;
+let wakeLock = null;
+
+function pickLang() {
+  try { const saved = localStorage.getItem("sg_lang"); if (T[saved]) return saved; } catch (_) {}
+  for (const l of navigator.languages || [navigator.language || ""]) {
+    const code = l.slice(0, 2).toLowerCase();
+    if (T[code]) return code;
+  }
+  return "pt";
+}
+
+function el(tag, props = {}, kids = []) {
+  const n = Object.assign(document.createElement(tag), props);
+  n.append(...kids);
+  return n;
+}
+
+function fmtSize(bytes) {
+  return bytes >= 1e9 ? (bytes / 1e9).toFixed(1) + " GB" : Math.max(1, Math.round(bytes / 1e6)) + " MB";
+}
+
+function videoType(file) {
+  if (file.type.startsWith("video/")) return file.type;
+  return EXT_TYPE[(file.name.split(".").pop() || "").toLowerCase()] || null;
+}
+
+function applyLang() {
+  const t = T[lang];
+  document.documentElement.lang = t.html;
+  $("title").textContent = t.title;
+  $("lead").textContent = t.lead;
+  $("pickQ").textContent = t.pickQ;
+  $("pickHint").textContent = t.pickHint;
+  $("pickBtn").textContent = t.pickBtn;
+  $("pickSub").textContent = fill(t.pickSub, { max: MAX_LABEL });
+  $("creditQ").textContent = t.creditQ;
+  $("creditHint").textContent = t.creditHint;
+  $("credit").placeholder = t.creditPh;
+  $("consentQ").textContent = t.consentQ;
+  $("consentText").textContent = t.consentText;
+  $("keep").textContent = t.keep;
+  $("thanksTitle").textContent = t.thanksTitle;
+  $("thanksText").textContent = t.thanksText;
+  $("again").textContent = t.again;
+  document.querySelectorAll("#langs button").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === lang));
+  items.forEach(renderItem);
+  updateSummary();
+}
+
+function addFiles(list) {
+  for (const file of list) {
+    const type = videoType(file);
+    const thumb = el("video", { src: URL.createObjectURL(file) + "#t=0.1", muted: true, playsInline: true, preload: "metadata" });
+    const bar = el("i");
+    const status = el("span", { className: "status" });
+    const rm = el("button", { type: "button", className: "rm", textContent: "×", ariaLabel: "remove" });
+    const li = el("li", { className: "file" }, [thumb, el("div", { className: "info" }, [el("span", { className: "name", textContent: file.name }), el("div", { className: "bar" }, [bar]), status]), rm]);
+    const item = { file, type, li, bar, status, rm, thumb, pct: 0, state: !type ? "invalid" : file.size > MAX_MB * 1024 * 1024 ? "invalid" : "waiting" };
+    rm.addEventListener("click", () => {
+      if (item.state === "uploading") return;
+      URL.revokeObjectURL(thumb.src.split("#")[0]);
+      items = items.filter(x => x !== item);
+      li.remove();
+      updateSummary();
+    });
+    items.push(item);
+    $("files").append(li);
+    renderItem(item);
+  }
+  $("pickBox").classList.remove("missing");
+  updateSummary();
+}
+
+function renderItem(item) {
+  const t = T[lang];
+  item.li.classList.toggle("done", item.state === "done");
+  item.li.classList.toggle("bad", item.state === "failed" || item.state === "invalid");
+  item.rm.hidden = item.state === "uploading" || item.state === "done";
+  item.bar.style.width = (item.state === "done" ? 100 : item.pct) + "%";
+  item.status.textContent =
+    item.state === "invalid" ? (item.type ? fill(t.tooBig, { max: MAX_LABEL }) : t.notVideo) + " · " + fmtSize(item.file.size)
+    : item.state === "uploading" ? fill(t.uploading, { p: item.pct })
+    : item.state === "done" ? t.done
+    : item.state === "failed" ? t.failed
+    : t.waiting + " · " + fmtSize(item.file.size);
+}
+
+function updateSummary() {
+  const t = T[lang];
+  const todo = items.filter(i => i.state !== "invalid" && i.state !== "done");
+  const bytes = todo.reduce((s, i) => s + i.file.size, 0);
+  $("total").hidden = !todo.length;
+  $("total").textContent = fill(t.total, { n: todo.length, size: fmtSize(bytes) });
+  $("keep").hidden = !busy;
+  $("submit").disabled = busy;
+  $("submit").textContent = busy ? t.sending : items.some(i => i.state === "failed") ? t.retry : t.submit;
+}
+
+// Fala com o Apps Script. Corpo em text/plain (padrão do fetch pra string) pra não ter
+// "preflight" de CORS, que o Apps Script não responde.
+async function call(body) {
+  let res;
+  try {
+    res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ k: KEY, ...body }) });
+  } catch (x) {
+    throw Object.assign(new Error("network"), { retry: true });
+  }
+  if (!res.ok) throw Object.assign(new Error("http " + res.status), { retry: true });
+  const out = await res.json();
+  if (out.error) throw Object.assign(new Error(out.error), { code: out.error, retry: out.retry });
+  return out;
+}
+
+function toBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.slice(r.result.indexOf(",") + 1));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Upload "resumable" em pedaços de 8 MB: aguenta vídeo grande e internet ruim de festa —
+// se cair, pergunta ao Drive até onde chegou e continua dali em vez de recomeçar do zero.
+async function uploadOne(item, credit) {
+  let fails = 0;
+  while (true) {
+    try {
+      if (!item.id) {
+        const r = await call({ action: "start", event: EVENT, lang, name: item.file.name, size: item.file.size, type: item.type, credit });
+        Object.assign(item, { id: r.id, chunk: r.chunk, offset: 0 });
+      } else if (fails || item.state === "uploading") {
+        item.offset = (await call({ action: "status", id: item.id })).offset;
+      }
+      while (true) {
+        const data = await toBase64(item.file.slice(item.offset, item.offset + item.chunk));
+        const r = await call({ action: "chunk", id: item.id, offset: item.offset, data });
+        if (r.done) return;
+        item.offset = r.offset;
+        item.pct = Math.floor(item.offset / item.file.size * 100);
+        renderItem(item);
+        fails = 0;
+      }
+    } catch (x) {
+      if (x.code === "expired") item.id = null; // sessão de upload venceu (6 h): começa de novo
+      if (!x.retry || ++fails > 6) throw x;
+      await sleep(Math.min(2000 * fails, 15000));
+    }
+  }
+}
+
+async function submit(e) {
+  e.preventDefault();
+  if (busy) return;
+  const t = T[lang];
+  const err = $("err");
+  err.hidden = true;
+
+  const todo = items.filter(i => i.state === "waiting" || i.state === "failed");
+  if (!todo.length) {
+    if (items.length && items.every(i => i.state === "done" || i.state === "invalid") && items.some(i => i.state === "done")) return finish();
+    $("pickBox").classList.add("missing");
+    err.textContent = t.noFiles; err.hidden = false;
+    $("pickBox").scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  if (!$("consent").checked) {
+    $("consentBox").classList.add("missing");
+    err.textContent = t.needConsent; err.hidden = false;
+    $("consentBox").scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  busy = true;
+  let badLink = false;
+  updateSummary();
+  await keepAwake();
+  const credit = $("credit").value.trim();
+  for (const item of todo) {
+    item.state = "uploading"; renderItem(item);
+    try {
+      await uploadOne(item, credit);
+      item.state = "done";
+    } catch (x) {
+      console.error(x);
+      if (x.code === "forbidden") badLink = true;
+      item.state = x.code === "too_big" || x.code === "not_video" ? "invalid" : "failed";
+    }
+    renderItem(item);
+    if (badLink) break;
+  }
+  busy = false;
+  releaseAwake();
+  updateSummary();
+
+  if (badLink) { err.textContent = t.badLink; err.hidden = false; }
+  else if (items.some(i => i.state === "failed")) { err.textContent = t.fail; err.hidden = false; }
+  else finish();
+}
+
+// Celular não pode apagar a tela no meio do envio (senão o navegador pausa o upload)
+async function keepAwake() {
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (_) {}
+}
+function releaseAwake() { wakeLock?.release().catch(() => {}); wakeLock = null; }
+document.addEventListener("visibilitychange", () => { if (busy && document.visibilityState === "visible") keepAwake(); });
+window.addEventListener("beforeunload", e => { if (busy) { e.preventDefault(); e.returnValue = ""; } });
+
+function finish() {
+  $("upload").hidden = true;
+  $("thanks").hidden = false;
+  window.scrollTo({ top: 0 });
+}
+
+function reset() {
+  items.forEach(i => URL.revokeObjectURL(i.thumb.src.split("#")[0]));
+  items = [];
+  $("files").replaceChildren();
+  $("fileIn").value = "";
+  $("err").hidden = true;
+  $("upload").hidden = false;
+  $("thanks").hidden = true;
+  updateSummary();
+  window.scrollTo({ top: 0 });
+}
+
+document.querySelectorAll("#langs button").forEach(b => b.addEventListener("click", () => {
+  lang = b.dataset.lang;
+  try { localStorage.setItem("sg_lang", lang); } catch (_) {}
+  applyLang();
+}));
+$("fileIn").addEventListener("change", e => { addFiles(e.target.files); e.target.value = ""; });
+$("consent").addEventListener("change", () => $("consentBox").classList.remove("missing"));
+$("upload").addEventListener("submit", submit);
+$("again").addEventListener("click", reset);
+applyLang();
+</script>
+</body>
+</html>
